@@ -20,14 +20,28 @@ function App() {
     }`)
 
   const [ review, setReview ] = useState(``)
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     prism.highlightAll()
   }, [])
 
   async function reviewCode() {
-    const response = await axios.post('http://localhost:3000/ai/get-review', { code })
-    setReview(response.data)
+    if (!code.trim()) return;
+
+    setLoading(true);
+    setError(null);
+    setReview("");
+    try {
+      const response = await axios.post('https://code-review-backend-iota.vercel.app/ai/get-review', { code });
+      setReview(response.data);
+    } catch (err) {
+      console.error("Error fetching review:", err);
+      setError("Failed to fetch review. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -52,17 +66,26 @@ function App() {
               }}
             /> 
         </div>
-        <div onClick={reviewCode}
-            className="review">Review</div>
+        <div 
+  onClick={!loading ? reviewCode : null} 
+  className={`review ${loading ? 'disabled' : ''}`}
+>
+  {loading ? "Reviewing..." : "Review"}
+</div>
 
-        </div>
-        <div className="rightcontainer">
-          <Markdown
-
-            rehypePlugins={[ rehypeHighlight ]}
-
-          >{review}</Markdown>
-        </div>
+</div>
+<div className="rightcontainer">
+  {loading ? (
+    <div className="loading-state">
+      <div className="spinner"></div>
+      <p>Analyzing code, please wait...</p>
+    </div>
+  ) : (
+    <Markdown rehypePlugins={[rehypeHighlight]}>
+      {review}
+    </Markdown>
+  )}
+</div>
     </main>
     </>
   )
